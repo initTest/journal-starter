@@ -5,13 +5,16 @@ on:
     branches: [ main ]
 
 env:
-  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}        # e.g. 147565286894.dkr.ecr.us-east-1.amazonaws.com
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}    # e.g. cloud-learn
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}      # or set as repo secret
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}  # or set as repo secret
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # if your secrets live in a GitHub Environment (see screenshot),
+    # uncomment the next line and replace <your-environment-name>
+    # environment: <your-environment-name>
 
     steps:
       - name: Checkout
