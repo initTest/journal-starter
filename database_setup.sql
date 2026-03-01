@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_entries_created_at ON entries(created_at);
 CREATE INDEX IF NOT EXISTS idx_entries_data_gin ON entries USING GIN (data);
 
 -- Verify the table was created
-\d entries;
+-- \d entries;
 
 -- Test with a sample entry (optional)
 -- INSERT INTO entries (id, data, created_at, updated_at) 

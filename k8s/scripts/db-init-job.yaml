@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: journal-db-init
+spec:
+  template:
+    spec:
+      containers:
+        - name: psql
+          image: postgres:15
+          # We use the DATABASE_URL secret you already have in the cluster
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: journal-api-secrets
+                  key: DATABASE_URL
+          # This command runs psql using the URL and the mounted file
+          command: ["/bin/sh", "-c"]
+          args:
+            - psql $(DATABASE_URL) -f /scripts/database_setup.sql
+          volumeMounts:
+            - name: sql-volume
+              mountPath: /scripts
+      volumes:
+        - name: sql-volume
+          configMap:
+            name: db-setup-script
+      restartPolicy: Never
+  backoffLimit: 2

@@ -5,10 +5,9 @@ metadata:
   namespace: monitoring
   labels:
     grafana_dashboard: "1" # This "Sidecar" label is what tells Grafana to load this
-spec:
-  data:
-    fastapi-stats.json: |-
-      {
+data:
+  fastapi-stats.json: |-
+    {
         "annotations": { "list": [] },
         "editable": true,
         "fiscalYearStartMonth": 0,
