@@ -103,29 +103,6 @@ class TestGetAllEntries:
         assert len(result["entries"]) == 3
 
 
-class TestGetSingleEntry:
-    """Tests for GET /entries/{entry_id} endpoint."""
-
-    @pytest.mark.skip(reason="Endpoint not implemented yet")
-    async def test_get_entry_by_id_success(self, test_client: AsyncClient, created_entry: dict):
-        """Test successfully retrieving a single entry by ID."""
-        entry_id = created_entry["id"]
-        response = await test_client.get(f"/entries/{entry_id}")
-
-        assert response.status_code == 200
-        entry = response.json()
-        assert entry["id"] == created_entry["id"]
-        assert entry["work"] == created_entry["work"]
-
-    @pytest.mark.skip(reason="Endpoint not implemented yet")
-    async def test_get_entry_not_found(self, test_client: AsyncClient):
-        """Test that retrieving a non-existent entry returns 404."""
-        fake_id = "00000000-0000-0000-0000-000000000000"
-        response = await test_client.get(f"/entries/{fake_id}")
-
-        assert response.status_code == 404
-
-
 class TestUpdateEntry:
     """Tests for PATCH /entries/{entry_id} endpoint."""
 
@@ -155,31 +132,6 @@ class TestUpdateEntry:
         assert response.status_code == 404
 
 
-class TestDeleteEntry:
-    """Tests for DELETE /entries/{entry_id} endpoint."""
-
-    @pytest.mark.skip(reason="Endpoint not implemented yet")
-    async def test_delete_entry_success(self, test_client: AsyncClient, created_entry: dict):
-        """Test successfully deleting a single entry."""
-        entry_id = created_entry["id"]
-        response = await test_client.delete(f"/entries/{entry_id}")
-
-        assert response.status_code == 200
-
-        # Verify the entry was actually deleted
-        get_response = await test_client.get("/entries")
-        result = get_response.json()
-        assert result["count"] == 0
-
-    @pytest.mark.skip(reason="Endpoint not implemented yet")
-    async def test_delete_entry_not_found(self, test_client: AsyncClient):
-        """Test that deleting a non-existent entry returns 404."""
-        fake_id = "00000000-0000-0000-0000-000000000000"
-        response = await test_client.delete(f"/entries/{fake_id}")
-
-        assert response.status_code == 404
-
-
 class TestDeleteAllEntries:
     """Tests for DELETE /entries endpoint."""
 
@@ -203,13 +155,3 @@ class TestDeleteAllEntries:
         assert result["count"] == 0
 
 
-class TestAnalyzeEntry:
-    """Tests for POST /entries/{entry_id}/analyze endpoint."""
-
-    @pytest.mark.skip(reason="Endpoint not implemented yet")
-    async def test_analyze_entry_not_found(self, test_client: AsyncClient):
-        """Test that analyzing a non-existent entry returns 404."""
-        fake_id = "00000000-0000-0000-0000-000000000000"
-        response = await test_client.post(f"/entries/{fake_id}/analyze")
-
-        assert response.status_code == 404
