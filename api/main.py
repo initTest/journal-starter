@@ -4,6 +4,9 @@ from fastapi import FastAPI
 
 from api.routers.journal_router import router as journal_router
 
+# prometheus instrumentation
+from prometheus_fastapi_instrumentator import Instrumentator
+
 load_dotenv()
 
 # TODO: Setup basic console logging
@@ -16,3 +19,10 @@ load_dotenv()
 
 app = FastAPI(title="Journal API", description="A simple journal API for tracking daily work, struggles, and intentions")
 app.include_router(journal_router)
+
+# Expose Prometheus metrics at /metrics
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}

@@ -5,3 +5,11 @@ aiohttp
 sqlalchemy
 psycopg2-binary
 asyncpg
+prometheus-fastapi-instrumentator
+fastapi
+uvicorn[standard]
+python-dotenv
+aiohttp
+sqlalchemy
+psycopg2-binary
+asyncpg

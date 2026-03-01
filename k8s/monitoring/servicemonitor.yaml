@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: journal-api-monitor
+  # This labels tells the Prometheus Operator to pick up this monitor
+  labels:
+    release: prometheus-stack 
+spec:
+  selector:
+    matchLabels:
+      app: journal-api # This MUST match the label in your k8s/service.yaml
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s

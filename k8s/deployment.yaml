@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: journal-api
+  labels:
+    app: journal-api
+spec:
+  replicas: 1 # Good practice: run at least 2 for high availability
+  selector:
+    matchLabels:
+      app: journal-api
+  template:
+    metadata:
+      labels:
+        app: journal-api
+    spec:
+      containers:
+      - name: journal-api
+        image: IMAGE_PLACEHOLDER # This will be replaced by your CI/CD pipeline
+        envFrom: #local env variables 
+        - secretRef:
+            name: journal-api-secrets
+        ports:
+        - containerPort: 8000
+        resources: # Good practice: always define resource limits
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10

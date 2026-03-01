@@ -1,0 +1,170 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  # --- JOB 1: TEST ---
+  test:
+    name: Run Linting and Tests
+    runs-on: ubuntu-latest
+    
+    # We use a service container to provide a real database for integration testing
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: journal_user
+          POSTGRES_PASSWORD: journal_password
+          POSTGRES_DB: journal_db
+        ports:
+          - 5432:5432
+        # Ensure postgres is healthy before starting the job steps
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install Dependencies
+        run: uv sync --all-extras
+
+      - name: Run Linting (Ruff)
+        run: uv run ruff check .
+        # Why Ruff? It's extremely fast and combines multiple linters (Flake8, isort, etc.)
+
+      - name: Run Database Setup
+        env:
+          PGPASSWORD: journal_password
+        run: |
+          # We use psql to apply our schema before running pytest
+          psql -h localhost -U journal_user -d journal_db -f database_setup.sql
+
+      - name: Run Tests
+        env:
+          DATABASE_URL: postgresql://journal_user:journal_password@localhost:5432/journal_db
+        run: uv run pytest
+  # --- JOB 2: BUILD ---
+  build:
+    name: Build and Push Image
+    needs: test # CRITICAL: This ensures we only build if tests pass!
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        # Buildx allows for advanced features like multi-platform builds and better caching.
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+  # --- JOB 3: DEPLOY ---
+  deploy:
+    name: Deploy to Kubernetes
+    needs: build # Wait for the image to be pushed first!
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Kubeconfig
+        run: |
+          # This command creates a local ~/.kube/config file so kubectl knows how to talk to your cluster
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name journal-cluster
+
+      - name: Substitute Image and Deploy
+        run: |
+          # 1. Substitute the placeholder with the actual image we just built
+          # We use '|' as a separator because the image name contains slashes '/'
+          sed -i "s|IMAGE_PLACEHOLDER|${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g" k8s/deployment.yaml
+          
+          # 2. Apply all manifests in your k8s folder
+          kubectl apply -f k8s/
+  # --- JOB 4: MONITORING ---
+  monitoring:
+    name: Setup Monitoring Stack
+    needs: deploy # Only run after the app is successfully deployed!
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Kubeconfig
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name journal-cluster
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Deploy Prometheus Stack
+        run: |
+          # 1. Add and Update the Prometheus Helm repo
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+          
+          # 2. Create the namespace for monitoring (it's safe if it already exists)
+          kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+          
+          # 3. Use 'helm upgrade --install' to install/update the stack
+          # We set serviceMonitorSelectorNilUsesHelmValues to false so it picks up your ServiceMonitor
+          helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack \
+            --namespace monitoring \
+            --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+          
+          # 4. Apply your NEW monitoring manifests!
+          kubectl apply -f k8s/monitoring/
