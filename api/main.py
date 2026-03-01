@@ -1,11 +1,8 @@
-
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from api.routers.journal_router import router as journal_router
-
-# prometheus instrumentation
-from prometheus_fastapi_instrumentator import Instrumentator
 
 load_dotenv()
 
