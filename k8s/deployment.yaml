@@ -21,9 +21,6 @@ spec:
           env:
             - name: APP_ENV
               value: "cloud"
-          envFrom: #local env variables
-            - secretRef:
-                name: journal-api-secrets
           ports:
             - containerPort: 8000
           resources: # Good practice: always define resource limits

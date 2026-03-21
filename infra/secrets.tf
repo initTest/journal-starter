@@ -12,6 +12,6 @@ resource "aws_secretsmanager_secret" "api_secrets" {
 
   lifecycle {
     # This prevents the secret from being deleted, even during 'terraform destroy'
-    prevent_destroy = true
+    #prevent_destroy = true
   }
 }
