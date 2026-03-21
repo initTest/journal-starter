@@ -14,30 +14,34 @@ spec:
       labels:
         app: journal-api
     spec:
+      serviceAccountName: journal-api-sa # Add this line!
       containers:
-      - name: journal-api
-        image: IMAGE_PLACEHOLDER # This will be replaced by your CI/CD pipeline
-        envFrom: #local env variables 
-        - secretRef:
-            name: journal-api-secrets
-        ports:
-        - containerPort: 8000
-        resources: # Good practice: always define resource limits
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "500m"
-            memory: "256Mi"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 10
+        - name: journal-api
+          image: IMAGE_PLACEHOLDER # This will be replaced by your CI/CD pipeline
+          env:
+            - name: APP_ENV
+              value: "cloud"
+          envFrom: #local env variables
+            - secretRef:
+                name: journal-api-secrets
+          ports:
+            - containerPort: 8000
+          resources: # Good practice: always define resource limits
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

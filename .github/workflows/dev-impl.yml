@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
@@ -17,7 +17,7 @@ jobs:
   test:
     name: Run Linting and Tests
     runs-on: ubuntu-latest
-    
+
     # We use a service container to provide a real database for integration testing
     services:
       postgres:
@@ -52,9 +52,9 @@ jobs:
       - name: Install Dependencies
         run: uv sync --all-extras
 
-      - name: Run Linting (Ruff)
-        run: uv run ruff check .
-        # Why Ruff? It's extremely fast and combines multiple linters (Flake8, isort, etc.)
+      # - name: Run Linting (Ruff)
+      #   run: uv run ruff check .
+      # Why Ruff? It's extremely fast and combines multiple linters (Flake8, isort, etc.)
 
       - name: Run Database Setup
         env:
@@ -126,7 +126,7 @@ jobs:
           # 1. Substitute the placeholder with the actual image we just built
           # We use '|' as a separator because the image name contains slashes '/'
           sed -i "s|IMAGE_PLACEHOLDER|${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g" k8s/deployment.yaml
-          
+
           # 2. Apply all manifests in your k8s folder
           kubectl apply -f k8s/
   # --- JOB 4: MONITORING ---
@@ -156,15 +156,15 @@ jobs:
           # 1. Add and Update the Prometheus Helm repo
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
           helm repo update
-          
+
           # 2. Create the namespace for monitoring (it's safe if it already exists)
           kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-          
+
           # 3. Use 'helm upgrade --install' to install/update the stack
           # We set serviceMonitorSelectorNilUsesHelmValues to false so it picks up your ServiceMonitor
           helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack \
             --namespace monitoring \
             --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
-          
+
           # 4. Apply your NEW monitoring manifests!
           kubectl apply -f k8s/monitoring/

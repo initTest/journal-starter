@@ -22,3 +22,17 @@ resource "kubernetes_secret" "journal_api_secrets" {
   # This tells Terraform: "Don't try to create the secret until the EKS cluster is fully ready."
   depends_on = [module.eks, aws_db_instance.journal_db]
 }
+
+resource "kubernetes_service_account" "journal_api_sa" {
+  metadata {
+    name      = "journal-api-sa"
+    namespace = "default"
+    annotations = {
+      # This is the "Magic Link" that tells EKS which IAM role to give this SA
+      "eks.amazonaws.com/role-arn" = aws_iam_role.journal_api_role.arn
+    }
+  }
+
+  # Ensure the EKS cluster is ready before creating this
+  depends_on = [module.eks]
+}

@@ -13,3 +13,4 @@ aiohttp
 sqlalchemy
 psycopg2-binary
 asyncpg
+boto3
