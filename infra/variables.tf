@@ -68,3 +68,8 @@ variable "db_engine_version" {
   type        = string
   default     = "15.10"
 }
+
+variable "alert_email" {
+  description = "Email address for security alerts"
+  type        = string
+}

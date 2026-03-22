@@ -42,6 +42,7 @@ resource "aws_db_instance" "journal_db" {
   db_subnet_group_name   = aws_db_subnet_group.journal_db_subnets.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
-  skip_final_snapshot = true
-  publicly_accessible = false # Keep it internal to the VPC
+  skip_final_snapshot             = true
+  publicly_accessible             = false # Keep it internal to the VPC
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 }
